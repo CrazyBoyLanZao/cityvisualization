@@ -1,0 +1,9 @@
+travel_scene_urls = [
+        '望江楼/'
+    ],//旅游文件夹名字
+    travel_scene_name = [
+        [ '枇杷门巷', '沈流雅筑', '望江楼夜景', '竹艺']
+    ],//旅游点的名字
+    travel_scene_num = [
+        4
+    ];//旅游点个数

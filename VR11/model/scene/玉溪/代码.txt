@@ -1,0 +1,9 @@
+travel_scene_urls = [
+        '玉溪/'
+    ],//旅游文件夹名字
+    travel_scene_name = [
+        [ '古柏阁', '红云殿', '帽天山2', '涌金寺', '玉溪' ]
+    ],//旅游点的名字
+    travel_scene_num = [
+        5
+    ];//旅游点个数

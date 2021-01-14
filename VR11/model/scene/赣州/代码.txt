@@ -1,0 +1,9 @@
+travel_scene_urls = [
+        '赣州/'
+    ],//旅游文件夹名字
+    travel_scene_name = [
+        [ '浮桥', '俯瞰赣州', '万象城', '涌金门', '郁孤台' ]
+    ],//旅游点的名字
+    travel_scene_num = [
+        5
+    ];//旅游点个数

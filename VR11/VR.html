@@ -1,0 +1,1154 @@
+<!DOCTYPE style='width:100%'>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>VR</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <!-- Origin Trial Token, feature = WebXR Device API (For Chrome M69+), origin = https://threejs.org, expires = 2019-03-06 -->
+    <meta http-equiv="origin-trial" data-feature="WebXR Device API (For Chrome M69+)" data-expires="2019-03-06" content="AvDjbxYpoTgOL1PS0JEra7KFCehfTlKnXpU/ORSwNdCQ35cX70cTUkXOnQ26A5XJi3eXHSKpBPchdt5lbcxDuAIAAABTeyJvcmlnaW4iOiJodHRwczovL3RocmVlanMub3JnOjQ0MyIsImZlYXR1cmUiOiJXZWJYUkRldmljZU02OSIsImV4cGlyeSI6MTU1MTgzMDM5OX0=">
+    <style>
+        html {
+            width: 100%;
+            height: 100%;
+            background-repeat: no-repeat;
+        }
+        body {
+            font-family: Monospace;
+            background-color: #101010;
+            color: #fff;
+            margin: 0px;
+            overflow: hidden;
+        }
+        a {
+            color: #f00;
+        }
+    </style>
+    <script src="js/three.js"></script>
+    <script src="js/WebVR.js"></script>
+    <script src="js/OBJLoader.js"></script>
+    <script src="js/stats.min.js"></script>
+    <script src="js/shaders/ConvolutionShader.js"></script>
+    <script src="js/shaders/CopyShader.js"></script>
+
+    <script src="js/postprocessing/EffectComposer.js"></script>
+    <script src="js/postprocessing/RenderPass.js"></script>
+    <script src="js/postprocessing/MaskPass.js"></script>
+    <script src="js/postprocessing/BloomPass.js"></script>
+    <script src="js/postprocessing/ShaderPass.js"></script>
+    <script src="js/dat.gui.min.js"></script>
+
+
+    <script src="js/leap-1.0.0.js"></script>
+    <script src="js/leap-plugins-0.1.12.js"></script>
+
+
+    <script src="js/varible.js"></script>
+    <script src="js/function.js"></script>
+    <script src="js/datacode.js"></script>
+    <script src="js/oculuscontrol.js"></script>
+    <script src="js/leapcontroll.js"></script>
+    <script src="js/timeName.min.js"></script>
+    <script src="js/CityAQI.min.js"></script>
+    <script src="js/rain.min.js"></script>
+    <script src="js/points.min.js"></script>
+
+</head>
+
+<body style="width: 200%">
+
+<script>
+
+
+
+
+    container = document.createElement( 'div' );
+    // container.style.width="200%"
+    document.body.appendChild( container );
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color( 0x000 );
+    camera = new THREE.PerspectiveCamera( 70 , window.innerWidth / window.innerHeight , 0.01 , 1e6 )
+    scene.add( new THREE.HemisphereLight( 0xffffff , 0xffffff ) );
+    renderer = new THREE.WebGLRenderer( { antialias: true } );
+    renderer.setPixelRatio( window.devicePixelRatio );
+    renderer.setSize( window.innerWidth , window.innerHeight );
+    renderer.gammaInput = true;
+    renderer.gammaOutput = true;
+    renderer.shadowMap.enabled = true;
+    renderer.vr.enabled = true;
+    container.appendChild( renderer.domElement );
+    document.body.append( WEBVR.createButton( renderer ) );
+    light = new THREE.DirectionalLight( 0xffffff );
+    light.position.set( 1e4, 1e4, 1e4 );
+    //light.castShadow = true;
+    //light.shadow.mapSize.set( 4096, 4096 );
+    scene.add( light );
+
+
+    /******OculusController**********/
+
+    controller1 = renderer.vr.getController(0);
+
+
+    controller1.addEventListener( 'selectstart', travel_next_selstart );
+    controller1.addEventListener( 'selectend', travel_next_selend );
+
+    controller1.addEventListener( 'selectstart', travel_last_selstart );
+    controller1.addEventListener( 'selectend', travel_last_selend );
+
+    controller1.addEventListener( 'selectstart', travel_front_selstart );
+    controller1.addEventListener( 'selectend', travel_front_selend );
+
+    controller1.addEventListener( 'selectstart', travel_back_selstart );
+    controller1.addEventListener( 'selectend', travel_back_selend );
+
+    controller1.addEventListener( 'selectstart', damage_next_selstart );
+    controller1.addEventListener( 'selectend', damage_next_selend );
+
+    controller1.addEventListener( 'selectstart', damage_last_selstart );
+    controller1.addEventListener( 'selectend', damage_last_selend );
+
+    controller1.addEventListener( 'selectstart', barometer_next_selstart );
+    controller1.addEventListener( 'selectend', barometer_next_selend );
+
+    controller1.addEventListener( 'selectstart', barometer_last_selstart );
+    controller1.addEventListener( 'selectend', barometer_last_selend );
+
+    controller1.addEventListener( 'selectstart', damage_screen_selstart );
+    controller1.addEventListener( 'selectend', damage_screen_selend );
+
+    controller1.addEventListener( 'selectstart', weather_wind_selstart );
+    controller1.addEventListener( 'selectend', weather_wind_selend );
+
+    controller1.addEventListener( 'selectstart', weather_snow_selstart );
+    controller1.addEventListener( 'selectend', weather_snow_selend );
+
+    controller1.addEventListener( 'selectstart', weather_rain_selstart );
+    controller1.addEventListener( 'selectend', weather_rain_selend );
+
+    controller2 = renderer.vr.getController(1);
+
+
+    scene.add(controller1,controller2);
+    var geometry = new THREE.BufferGeometry().setFromPoints( [ new THREE.Vector3( 0, 0, 0) , new THREE.Vector3( 0, 0, - 1 ) ] );
+    var line = new THREE.Line( geometry );
+    line.name = 'line';
+    line.scale.z = 5;
+    controller1.add( line.clone() );
+    controller2.add( line.clone() );
+    raycaster = new THREE.Raycaster();
+    window.addEventListener( 'resize' , onWindowResize, false );
+    /******OculusController**********/
+
+
+
+
+    /********GroupClean************/
+    meau = new THREE.Group();
+    chart = new THREE.Group();
+    travel = new THREE.Group();
+    scene.add( meau, chart, travel);
+
+    travel_meau = new THREE.Group();
+    travel_next = new THREE.Group();
+    travel_last = new THREE.Group();
+    travel_back = new THREE.Group();
+    travel_front = new THREE.Group();
+    meau.add(travel_meau);
+
+
+    barometer = new THREE.Group();
+    barometer_next = new THREE.Group();
+    barometer_last = new THREE.Group();
+    barometer_sliderBall = new THREE.Group();
+    barometer_sliderBar = new THREE.Group();
+    barometer_data_p = new THREE.Group();
+    chart.add(barometer);
+
+    Bar = new THREE.Group();
+    chart.add(Bar);
+
+
+    dynamicBall = new THREE.Group();
+    dynamicBall.position.z -= 3000;
+    dynamicBall.position.y -= 1000;
+    chart.add(dynamicBall);
+
+    damage_screen = new THREE.Group();
+    damage_meau = new THREE.Group();
+    damage_last = new THREE.Group();
+    damage_next = new THREE.Group();
+
+
+    barometer.rotation.x = Math.PI/6;
+    chart.rotation.y = -Math.PI / 2;
+    meau.rotation.y = -Math.PI / 2;
+
+
+    /********GroupClean************/
+
+
+
+    /*******intro************/
+
+    //intro_txt
+    travel_intro = makeTextSprite(
+        '景区介绍： '+ travel_introdus[travel_url_Index][travel_name_Index],
+        {
+            fontsize: 20,
+            borderColor: {r:0, g:0, b:0, a:0.4},/* 边框颜色 */
+            backgroundColor: {r:255, g:255, b:255, a:0.9}/* 背景颜色 */
+        },
+        1 /* 缩放比例 */
+    );
+    travel_intro.position.z = -2e3;
+    travel_intro.position.x = 3e3;
+    meau.add(travel_intro);
+
+
+
+
+    /*******intro************/
+
+
+    /********Meau**********************/
+    /*旅游菜单*/
+    travel_title = makeTextSprite(
+        '智慧旅游系统',
+        {
+            fontsize: 20,
+            borderColor: {r:0, g:0, b:255, a:0.4},/* 边框颜色 */
+            backgroundColor: {r:0, g:255, b:255, a:0.9}/* 背景颜色 */
+        },
+        1 /* 缩放比例 */
+    );
+    travel_bg = new THREE.Mesh(
+        new THREE.CubeGeometry( 1400, 1000, 10),
+        new THREE.MeshStandardMaterial({
+            color: 0x00eeff,
+            map: THREE.ImageUtils.loadTexture( 'model/meau/meau.png', {}, function (){
+                        //renderer.render( scene, camera );
+                    }),
+            //side: THREE.DoubleSide,
+            transparent: true,
+            opacity: 0.99
+        })
+    );
+    travel_next_mesh = new THREE.Mesh(
+        new THREE.CubeGeometry( 140 , 100 , 50 ),
+        new THREE.MeshStandardMaterial({
+            color: 0xffffff,
+            map: THREE.ImageUtils.loadTexture( 'model/meau/next.png', {}, function (){
+                        //renderer.render( scene, camera );
+                    }),
+            //side: THREE.DoubleSide,
+            transparent: true,
+            opacity: 0.99
+        })
+    );
+    travel_last_mesh = new THREE.Mesh(
+        new THREE.CubeGeometry( 140 , 100 , 50 ),
+        new THREE.MeshStandardMaterial({
+            color: 0xffffff,
+            map: THREE.ImageUtils.loadTexture( 'model/meau/last.png', {}, function (){
+                        //renderer.render( scene, camera );
+                    }),
+            //side: THREE.DoubleSide,
+            transparent: true,
+            opacity: 0.99
+        })
+    );
+    travel_front_mesh = new THREE.Mesh(
+        new THREE.CubeGeometry( 140 , 100 , 50 ),
+        new THREE.MeshStandardMaterial({
+            color: 0xffffff,
+            map: THREE.ImageUtils.loadTexture( 'model/meau/front.png', {}, function (){
+                        //renderer.render( scene, camera );
+                    }),
+            //side: THREE.DoubleSide,
+            transparent: true,
+            opacity: 0.99
+        })
+    );
+    travel_back_mesh = new THREE.Mesh(
+        new THREE.CubeGeometry( 140 , 100 , 50 ),
+        new THREE.MeshStandardMaterial({
+            color: 0xffffff,
+            map: THREE.ImageUtils.loadTexture( 'model/meau/back.png', {}, function (){
+                        //renderer.render( scene, camera );
+                    }),
+            //side: THREE.DoubleSide,
+            transparent: true,
+            opacity: 0.99
+        })
+    );
+    travel_screen = new THREE.Mesh(
+        new THREE.CubeGeometry( 700, 500, 50 ),
+        new THREE.MeshStandardMaterial({
+            color: 0xffffff,
+            map: THREE.ImageUtils.loadTexture(
+                'model/scene/'+travel_scene_urls[travel_url_Index]+travel_scene_name[travel_url_Index][travel_name_Index]+'.jpg',
+                {},
+                function (){
+                        //renderer.render( scene, camera );
+                    }
+            ),
+            //side: THREE.DoubleSide
+        })
+    );
+
+    travel_next.add(travel_next_mesh);
+    travel_last.add(travel_last_mesh);
+    travel_front.add(travel_front_mesh);
+    travel_back.add(travel_back_mesh);
+
+    travel_title.position.y += 500;
+    travel_next.position.x += 500;
+    travel_last.position.x -= 500;
+    travel_front.position.y += 400;
+    travel_back.position.y -= 400;
+
+    travel_meau.add(
+        travel_bg,
+        travel_back,
+        travel_next,
+        travel_last,
+        travel_front,
+        travel_screen,
+        travel_title
+    );
+
+    travel_meau.position.z -= 2e3;
+
+
+    /*灾害菜单*/
+    damage_title = makeTextSprite(
+        '灾害复现系统',
+        {
+            fontsize: 20,
+            borderColor: {r:0, g:0, b:255, a:0.4},/* 边框颜色 */
+            backgroundColor: {r:0, g:255, b:255, a:0.9}/* 背景颜色 */
+        },
+        1 /* 缩放比例 */
+    );
+    damage_bg = new THREE.Mesh(
+        new THREE.CubeGeometry( 1400, 1000, 10),
+        new THREE.MeshStandardMaterial({
+            color: 0x00eeff,
+            map: THREE.ImageUtils.loadTexture( 'model/meau/meau.png', {}, function (){
+                        //renderer.render( scene, camera );
+                    }),
+            //side: THREE.DoubleSide,
+            transparent: true,
+            opacity: 0.99
+        })
+    );
+    damage_next_mesh = new THREE.Mesh(
+        new THREE.CubeGeometry( 140 , 100 , 50 ),
+        new THREE.MeshStandardMaterial({
+            color: 0xffffff,
+            map: THREE.ImageUtils.loadTexture( 'model/meau/next.png', {}, function (){
+                        //renderer.render( scene, camera );
+                    }),
+            //side: THREE.DoubleSide,
+            transparent: true,
+            opacity: 0.99
+        })
+    );
+    damage_last_mesh = new THREE.Mesh(
+        new THREE.CubeGeometry( 140 , 100 , 50 ),
+        new THREE.MeshStandardMaterial({
+            color: 0xffffff,
+            map: THREE.ImageUtils.loadTexture( 'model/meau/last.png', {}, function (){
+                        //renderer.render( scene, camera );
+                    }),
+            //side: THREE.DoubleSide,
+            transparent: true,
+            opacity: 0.99
+        })
+    );
+    damage_screen_mesh  = new THREE.Mesh(
+        new THREE.CubeGeometry( 700, 500, 50 ),
+        new THREE.MeshStandardMaterial({
+            color: 0xffffff,
+            map: THREE.ImageUtils.loadTexture(
+                'model/video/'+damage_name[damage_Index]+'.png',
+                {},
+                function (){
+                        //renderer.render( scene, camera );
+                    }
+            ),
+            //side: THREE.DoubleSide
+        })
+    );
+    damage_screen.add(damage_screen_mesh);
+    damage_title.position.y = 500;
+    damage_next.position.x = 500;
+    damage_last.position.x = -500;
+    damage_next.add(damage_next_mesh);
+    damage_last.add(damage_last_mesh);
+
+    damage_meau.add(
+        damage_next,
+        damage_last,
+        damage_bg,
+        damage_screen,
+        damage_title
+    );
+    damage_meau.position.z -= 25e2;
+    damage_meau.position.x -= 2e3;
+    damage_meau.rotation.y = Math.PI/6;
+    meau.add(damage_meau);
+
+
+    function meauFresh(){
+        damage_meau.remove(damage_screen);
+        damage_screen = new THREE.Mesh(
+            new THREE.CubeGeometry( 700, 500, 50 ),
+            new THREE.MeshStandardMaterial({
+                color: 0xffffff,
+                map: THREE.ImageUtils.loadTexture(
+                    'model/video/'+damage_name[damage_Index]+'.png',
+                    {},
+                    function (){
+                        //renderer.render( scene, camera );
+                    }
+                ),
+                //side: THREE.DoubleSide
+            })
+        );
+        damage_meau.add(damage_screen);
+
+        travel_meau.remove(travel_screen);
+        travel_screen = new THREE.Mesh(
+            new THREE.CubeGeometry( 700, 500, 50 ),
+            new THREE.MeshStandardMaterial({
+                color: 0xffffff,
+                map: THREE.ImageUtils.loadTexture(
+                    'model/scene/'+travel_scene_urls[travel_url_Index]+travel_scene_name[travel_url_Index][travel_name_Index]+'.jpg',
+                    {},
+                    function (){
+                        //renderer.render( scene, camera );
+                    }
+                ),
+                //side: THREE.DoubleSide
+            })
+        );
+        travel_meau.add(travel_screen);
+
+        scene.remove(travel_scene);
+        travel_scene = new THREE.Mesh(
+            new THREE.SphereGeometry( 1e4, 300, 300 ).scale( -1, 1, 1),
+            new THREE.MeshStandardMaterial({
+                map: new THREE.TextureLoader().load( 'model/scene/' + travel_scene_urls[travel_url_Index]+travel_scene_name[travel_url_Index][travel_name_Index] + '.jpg' )
+            })
+        );
+        travel_meau.add(travel_scene);
+
+        meau.remove(travel_intro);
+        travel_intro = makeTextSprite(
+            '景区介绍： '+ travel_introdus[travel_url_Index][travel_name_Index],
+            {
+                fontsize: 20,
+                borderColor: {r:0, g:0, b:0, a:0.4},/* 边框颜色 */
+                backgroundColor: {r:255, g:255, b:255, a:0.9}/* 背景颜色 */
+            },
+            1 /* 缩放比例 */
+        );
+        travel_intro.position.z = -2e3;
+        travel_intro.position.x = 3e3;
+        meau.add(travel_intro);
+    }
+    /********Meau**********************/
+
+
+
+
+
+
+    /************rain********************/
+
+    /**
+
+     // 加载雨滴理贴图
+     var textureTree = new THREE.TextureLoader().load("model/weather/rain.png");
+     // 创建一个组表示所有的雨滴
+     var raingroup = new THREE.Group();
+     // 批量创建雨滴精灵模型
+     for (let i = 0; i < 1000; i++) {
+            var spriteMaterial = new THREE.SpriteMaterial({
+                map:textureTree,//设置精灵纹理贴图
+            });
+            // 创建精灵模型对象
+            var sprite = new THREE.Sprite(spriteMaterial);
+            scene.add(sprite);
+            // 控制精灵大小,
+            sprite.scale.set(15, 25, 5);
+            var k1 = Math.random() - 0.5;
+            var k2 = Math.random() - 0.5;
+            var k3 = Math.random() - 0.5;
+            // 设置精灵模型位置，在整个空间上上随机分布
+            sprite.position.set(2e4 * k1, 2e4 * k3, 2e4 * k2);
+            raingroup.add(sprite);
+        }
+     scene.add(raingroup);//雨滴群组插入场景中
+
+     * 精灵创建下雨效果
+     */
+    rains = new THREE.Group();
+    snows = new THREE.Group();
+    winds = new THREE.Group();
+    weather_rain = new THREE.Group();
+    weather_snow = new THREE.Group();
+    weather_wind = new THREE.Group();
+    raintext = new THREE.TextureLoader().load("model/weather/rain.png");
+    snowtext = new THREE.TextureLoader().load("model/weather/snow.png");
+    windtext = new THREE.TextureLoader().load("model/weather/wind.png");
+    weather_meau = new THREE.Group();
+    meau.add(weather_meau);
+    weather_meau.position.z -= 2e3;
+    weather_meau.position.x += 2e3;
+    weather_meau.rotation.y = -Math.PI/6;
+    for (let i = 0; i < 2000; i++) {
+        let sprite = new THREE.Sprite(
+            new THREE.SpriteMaterial({
+                map:raintext,//设置精灵纹理贴图
+            })
+        );
+        // 控制精灵大小,
+        sprite.scale.set(30, 30, 5);
+        let k1 = Math.random() - 0.5;
+        let k2 = Math.random() - 0.5;
+        let k3 = Math.random() - 0.5;
+        // 设置精灵模型位置，在整个空间上上随机分布
+        sprite.position.set(2e4 * k1, 2e4 * k3, 2e4 * k2);
+        rains.add(sprite);
+    }
+    for (let i = 0; i < 2000; i++) {
+        let sprite = new THREE.Sprite(
+            new THREE.SpriteMaterial({
+                map:snowtext,//设置精灵纹理贴图
+            })
+        );
+        // 控制精灵大小,
+        sprite.scale.set(30, 30, 5);
+        let k1 = Math.random() - 0.5;
+        let k2 = Math.random() - 0.5;
+        let k3 = Math.random() - 0.5;
+        // 设置精灵模型位置，在整个空间上上随机分布
+        sprite.position.set(2e4 * k1, 2e4 * k3, 2e4 * k2);
+        snows.add(sprite);
+    }
+    for (let i = 0; i < 2000; i++) {
+        let sprite = new THREE.Sprite(
+            new THREE.SpriteMaterial({
+                map:windtext,//设置精灵纹理贴图
+            })
+        );
+        // 控制精灵大小,
+        sprite.scale.set(20, 25, 5);
+        let k1 = Math.random() - 0.5;
+        let k2 = Math.random() - 0.5;
+        let k3 = Math.random() - 0.5;
+        // 设置精灵模型位置，在整个空间上上随机分布
+        sprite.position.set(2e4 * k1, 2e4 * k3, 2e4 * k2);
+        winds.add(sprite);
+    }
+    function rains_move(e = 1){
+        for (let i = 0; i < e; i ++){
+            rains.children.forEach(sprite => {
+                sprite.position.y -= 5e2;
+                if (sprite.position.y < -1e4) {
+                    // 如果雨滴落到地面，重置y，从新下落
+                    sprite.position.y = 1e4;
+                }
+
+            });
+        }
+    }
+    function snows_move(e = 1){
+        for (let i = 0; i < e; i ++){
+            snows.children.forEach(sprite => {
+                sprite.position.y -= 2e1;
+                if (sprite.position.y < -1e4) {
+                    // 如果雨滴落到地面，重置y，从新下落
+                    sprite.position.y = 1e4;
+                }
+
+            });
+        }
+    }
+    function winds_move(e = 1){
+        for (let i = 0; i < e; i ++){
+            winds.children.forEach(sprite => {
+                sprite.position.z -= 2e2;
+                if (sprite.position.z < -1e4) {
+                    // 如果雨滴落到地面，重置y，从新下落
+                    sprite.position.z = 1e4;
+                }
+
+            });
+        }
+    }
+
+
+    weather_bg = new THREE.Mesh(
+        new THREE.CubeGeometry( 1400, 1000, 10 ),
+        new THREE.MeshStandardMaterial({
+            color: 0xffffff,
+            map: THREE.ImageUtils.loadTexture(
+                'model/meau/meau.png',
+                {},
+                function (){
+                }
+            ),
+            //side: THREE.DoubleSide
+            transparent: true,
+            opacity: 0.99,
+        })
+    );
+    weather_meau.add(weather_bg);
+    weather_rain_mesh = new THREE.Mesh(
+        new THREE.CubeGeometry( 280, 200, 50 ),
+        new THREE.MeshStandardMaterial({
+            color: 0xffffff,
+            map: THREE.ImageUtils.loadTexture(
+                'model/meau/rain.png',
+                {},
+                function (){
+
+                }
+            ),
+            transparent: true,
+            opacity: 0.99
+        })
+    );
+    weather_snow_mesh = new THREE.Mesh(
+        new THREE.CubeGeometry( 280, 200, 50 ),
+        new THREE.MeshStandardMaterial({
+            color: 0xffffff,
+            map: THREE.ImageUtils.loadTexture(
+                'model/meau/snow.png',
+                {},
+                function (){
+
+                }
+            ),
+            transparent: true,
+            opacity: 0.99
+        })
+    );
+    weather_wind_mesh = new THREE.Mesh(
+        new THREE.CubeGeometry( 280, 200, 50 ),
+        new THREE.MeshStandardMaterial({
+            color: 0xffffff,
+            map: THREE.ImageUtils.loadTexture(
+                'model/meau/wind.png',
+                {},
+                function (){
+
+                }
+            ),
+            transparent: true,
+            opacity: 0.99
+        })
+    );
+    weather_rain.add(weather_rain_mesh);
+    weather_snow.add(weather_snow_mesh);
+    weather_wind.add(weather_wind_mesh);
+    weather_rain.position.x -= 400;
+    weather_wind.position.x = 400;
+    weather_meau.add(weather_rain,weather_snow,weather_wind);
+
+
+    /************rain********************/
+
+
+
+    /**********SciCharts****************/
+    /*晴雨表*/
+    barometer_bg = new THREE.Mesh(
+        new THREE.CubeGeometry( 3200,1600,10 ),
+        new THREE.MeshStandardMaterial({
+            color: 0xffffff,
+            map: THREE.ImageUtils.loadTexture( 'model/meau/meau.png' , {} , function (){
+                renderer.render( scene , camera );
+            }),
+            transparent: true,
+            opacity: 0.99
+        })
+    );
+    barometer_table = new THREE.Mesh(
+        new THREE.CubeGeometry( 2500,1200,50 ),
+        new THREE.MeshStandardMaterial({
+            color: 0xffffff,
+            map: THREE.ImageUtils.loadTexture( 'model/meau/table.png' , {} , function (){
+               renderer.render( scene , camera );
+            })
+        })
+    );
+    barometer_next_mesh = new THREE.Mesh(
+        new THREE.CubeGeometry( 140,100,50 ),
+        new THREE.MeshStandardMaterial({
+          map: THREE.ImageUtils.loadTexture( 'model/meau/next.png' , {} , function (){
+              renderer.render( scene , camera );
+          })
+        })
+    );
+    barometer_last_mesh = new THREE.Mesh(
+        new THREE.CubeGeometry( 140,100,50 ),
+        new THREE.MeshStandardMaterial({
+            map: THREE.ImageUtils.loadTexture( 'model/meau/last.png' , {} , function (){
+                renderer.render( scene , camera );
+            })
+        })
+    );
+    barometer_sliderBall_mesh = new THREE.Mesh(
+        new THREE.SphereGeometry( 100,10,10 ),
+        new THREE.MeshStandardMaterial({
+            color: 0x999999
+        })
+    );
+    barometer_sliderBar_mesh = new THREE.Mesh(
+        new THREE.CylinderGeometry( 40,40,2500 ),
+        new THREE.MeshStandardMaterial({
+            color: 0x999999
+        })
+    );
+    for(let i = 0; i < 11; i++){
+        for(let j = 0; j < 24; j++){
+            barometer_data[ i*24+j ] = new THREE.Mesh(
+                new THREE.CubeGeometry( 99, 99, 50 ),
+                new THREE.MeshStandardMaterial({
+                    color: AQIColor( AQI[i][time_day][j] )
+                })
+            );
+            barometer_data[ i*24+j ].position.set(
+                -1200 + (j+1) * 100,
+                -550 + (i+1) * 100,
+                100
+            );
+            barometer_data[ i*24+j ].scale.set(O3[i][time_day][j]/262,O3[i][time_day][j]/262,1)
+            barometer_data_p.add(barometer_data[ i*24+j ]);
+        }
+    }
+    barometer_title = makeTextSprite(
+        'AQI&&O3小时数据晴雨表',
+        {
+            fontsize: 20,
+            borderColor: {r:0, g:0, b:255, a:0.4},/* 边框颜色 */
+            backgroundColor: {r:0, g:255, b:255, a:0.9}/* 背景颜色 */
+        },
+        1 /* 缩放比例 */
+    )
+    barometer_title.position.z += 100;
+    barometer_title.position.y += 1000;
+    barometer.add(barometer_title);
+    barometer_last.position.x -= 1400;
+    barometer_next.position.x += 1400;
+    barometer_sliderBall.position.y -= 800;
+    barometer_sliderBar.rotation.z = Math.PI/2;
+    barometer_sliderBar.position.y -= 800;
+    barometer.position.z -= 3e3;
+    barometer.position.y = 15e2;
+    barometer_data_p.position.x += 50;
+    barometer_data_p.position.y -= 50;
+
+    barometer_last.add(barometer_last_mesh);
+    barometer_next.add(barometer_next_mesh);
+    barometer_sliderBall.add(barometer_sliderBall_mesh);
+    barometer_sliderBar.add(barometer_sliderBar_mesh);
+    barometer.add(
+        barometer_bg,
+        barometer_table,
+        barometer_next,
+        barometer_last,
+        barometer_sliderBall,
+        barometer_sliderBar,
+        barometer_data_p
+    );
+
+
+    /*降雨量柱状图*/
+    Bar_map = new THREE.Mesh(
+        new THREE.CubeGeometry(1e3,100,1e3),
+        new THREE.MeshStandardMaterial({
+            color: 0xffffff,
+            map: THREE.ImageUtils.loadTexture( 'model/map.png' , {} , function (){
+                renderer.render( scene , camera );
+            })
+        })
+    );
+    for(let i = 0; i < 61; i++){
+        Bar_Pointsdata[i] = new THREE.Mesh(
+            new THREE.CylinderGeometry( 0,10,50 ),
+            new THREE.MeshStandardMaterial({
+                color: 0xffffff
+            })
+        );
+        Bar_Pointsdata[i].position.set( Bar_Pointspx[i] , 100, Bar_Pointspz[i] );
+        Bar.add(Bar_Pointsdata[i]);
+    }
+    for(let i = 0; i < 11; i++){
+        Bar_Bardata[i] = new THREE.Mesh(
+            new THREE.CylinderGeometry( 50,50,2000 ),
+            new THREE.MeshStandardMaterial({
+                color: RainColor(rain[i][time_day])
+            })
+        );
+        Bar_Bardata[i].position.set( Bar_Barpx[i] , 100, Bar_Barpz[i] );
+        Bar.add(Bar_Bardata[i]);
+    }
+    Bar_title = makeTextSprite(
+        '降雨量&&PM25&&PM10柱状图',
+        {
+            fontsize: 20,
+            borderColor: {r:0, g:0, b:255, a:0.4},/* 边框颜色 */
+            backgroundColor: {r:0, g:255, b:255, a:0.9}/* 背景颜色 */
+        },
+        0.1 /* 缩放比例 */
+    );
+    Bar_title.position.y += 300;
+    Bar.add(Bar_title);
+    Bar.position.y -= 1000;
+    Bar.add(Bar_map);
+
+
+
+    /*动态球*/
+    xAixs = new THREE.Mesh(
+        new THREE.CubeGeometry(2000,10,10),
+        new THREE.MeshStandardMaterial({
+            color: 0xff0000
+        })
+    );
+    yAixs = new THREE.Mesh(
+        new THREE.CubeGeometry(10,2000,10),
+        new THREE.MeshStandardMaterial({
+            color: 0x00ff00
+        })
+    );
+    zAixs = new THREE.Mesh(
+        new THREE.CubeGeometry(10,10,2000),
+        new THREE.MeshStandardMaterial({
+            color: 0x0000ff
+        })
+    );
+    xAixs_title = makeTextSprite(
+        'SO2',
+        {
+            fontsize: 20,
+            borderColor: {r:0, g:0, b:255, a:0.9},/* 边框颜色 */
+            backgroundColor: {r:0, g:255, b:255, a:0.9}/* 背景颜色 */
+        },
+        1 /* 缩放比例 */
+    );
+    yAixs_title = makeTextSprite(
+        'NO2',
+        {
+            fontsize: 20,
+            borderColor: {r:0, g:0, b:255, a:0.9},/* 边框颜色 */
+            backgroundColor: {r:0, g:255, b:255, a:0.9}/* 背景颜色 */
+        },
+        1 /* 缩放比例 */
+    );
+    zAixs_title = makeTextSprite(
+        'CO',
+        {
+            fontsize: 20,
+            borderColor: {r:0, g:0, b:255, a:0.9},/* 边框颜色 */
+            backgroundColor: {r:0, g:255, b:255, a:0.9}/* 背景颜色 */
+        },
+        1 /* 缩放比例 */
+    );
+    xAixs_title.position.x = 2e3;
+    yAixs_title.position.y = 1e3;
+    zAixs_title.position.z = 2e3;
+    dynamicBall.add(xAixs,yAixs,zAixs,xAixs_title,yAixs_title,zAixs_title);
+    for(let i = 0; i < 11; i++){
+        dynamicBall_data[i] = new THREE.Mesh(
+            new THREE.SphereGeometry(50,10,10),
+            new THREE.MeshStandardMaterial({
+                color: AQIColor( AQI[i][time_day][time_hour] )
+            })
+        );
+        dynamicBall.add(dynamicBall_data[i]);
+        px = dynamicBall_data[i].position.x;
+        py = dynamicBall_data[i].position.y;
+        pz = dynamicBall_data[i].position.z;
+        dynamicBall_data_title[i] = makeTextSprite(
+            cityName[i],
+            {
+                fontsize: 20,
+                borderColor: {r:0, g:0, b:255, a:0.4},/* 边框颜色 */
+                backgroundColor: {r:0, g:255, b:255, a:0.4}/* 背景颜色 */
+            },
+            0.1 /* 缩放比例 */
+        );
+        dynamicBall_data_title[i].position.x = dynamicBall_data[i].position.x;
+        dynamicBall_data_title[i].position.y = dynamicBall_data[i].position.y;
+        dynamicBall_data_title[i].position.z = dynamicBall_data[i].position.z;
+        dynamicBall.add(dynamicBall_data_title[i]);
+    }
+
+
+    function chartFresh(){
+        /***
+         AQI:  0 ~ 250
+         SO2:  0 ~ 385
+         NO2:  0 ~ 161
+         PM10:  0 ~ 200
+         CO:  0.0 ~ 9.373
+         O3:  0 ~ 262
+         PM25:  0 ~ 200
+         rain: 0 ~ 246.4
+         * ****/
+        for(let i = 0; i < 11; i++){
+            for(let j = 0; j < 24; j++){
+                barometer_data[ i*24+j ].material.color.set(AQIColor(AQI[i][time_day][j]));
+                barometer_data[ i*24+j ].scale.set(O3[i][time_day][j]/262,O3[i][time_day][j]/262,1);
+            }
+            Bar_Bardata[i].material.color.set(RainColor(rain[i][time_day]));
+            Bar_Bardata[i].scale.set( PM25[i][time_day][time_hour]/200,PM25[i][time_day][time_hour]/200,PM10[i][time_day][time_hour]/200 );
+            dynamicBall_data[i].material.color.set(AQIColor(AQI[i][time_day][time_hour]));
+            dynamicBall_data[i].position.x = px + SO2[i][time_day][time_hour]*10;
+            dynamicBall_data[i].position.y = py + NO2[i][time_day][time_hour]*10;
+            dynamicBall_data[i].position.z = pz + CO[i][time_day][time_hour]*1000;
+            dynamicBall.remove(dynamicBall_data_title[i]);
+            dynamicBall_data_title[i] = makeTextSprite(
+                cityName[i],
+                {
+                    fontsize: 20,
+                    borderColor: {r:0, g:0, b:255, a:0.3},/* 边框颜色 */
+                    backgroundColor: {r:0, g:255, b:255, a:0.3}/* 背景颜色 */
+                },
+                0.5 /* 缩放比例 */
+            );
+            dynamicBall_data_title[i].position.x = dynamicBall_data[i].position.x;
+            dynamicBall_data_title[i].position.y = dynamicBall_data[i].position.y + 100;
+            dynamicBall_data_title[i].position.z = dynamicBall_data[i].position.z;
+            dynamicBall.add(dynamicBall_data_title[i]);
+        }
+        for(let i = 0; i < 60; i++){
+            Bar_Pointsdata[i].material.color.set(AQIColor(PM25ZS[i][time_day][time_hour]));
+        }
+        /****刷新时间表*****/
+        chart.remove(timeTable);
+        timeTable = makeTextSprite(
+            timeName[ time_day * 24 + time_hour ],
+            {
+                fontsize: 20,
+                borderColor: {r:0, g:0, b:255, a:0.4},/* 边框颜色 */
+                backgroundColor: {r:0, g:255, b:255, a:0.9}/* 背景颜色 */
+            },
+            1 /* 缩放比例 */
+        );
+        timeTable.center = new THREE.Vector2( 0 , 0 );
+        timeTable.position.set( 0 , 500 , -1000 );
+        chart.add( timeTable );
+        /****刷新时间表*****/
+
+    }
+
+
+    /**********SciCharts****************/
+
+
+
+
+
+
+    /*************travel************/
+    travel_scene = new THREE.Mesh(
+        new THREE.SphereGeometry( 1e4, 300, 300 ).scale( -1, 1, 1),
+        new THREE.MeshStandardMaterial({
+            map: new THREE.TextureLoader().load( 'model/scene/' + travel_scene_urls[travel_url_Index]+travel_scene_name[travel_url_Index][travel_name_Index] + '.jpg' )
+        })
+    );
+    scene.add(travel_scene);
+    listener = new THREE.AudioListener();
+    audio = new THREE.Audio(listener);
+    audioLoader = new THREE.AudioLoader();
+    audioLoader.load('model/scene/' + travel_scene_urls[travel_url_Index]+travel_scene_name[travel_url_Index][travel_name_Index] + '.mp3', function(AudioBuffer) {
+        // 音频缓冲区对象关联到音频对象audio
+        audio.setBuffer(AudioBuffer);
+        audio.setLoop(true); //是否循环
+        audio.setVolume(0.5); //音量
+        // 播放缓冲区中的音频数据
+        audio.play(); //play播放、stop停止、pause暂停
+    });
+
+
+
+
+    /*************travel************/
+
+
+
+
+
+
+    /***********leap********************/
+    window.TO_RAD = Math.PI / 180;
+    window.TO_DEG = 1 / TO_RAD;
+    scene.remove(chart);
+    Leap.loop({
+        frame: function(frame){
+            var hand = frame.hands[0];
+            if(hand){
+            var dot = Leap.vec3.dot(hand.direction, hand.indexFinger.direction);
+                //握紧
+                if(dot.toPrecision(2)>0.7||dot.toPrecision(2)<-0.7) {
+                    scene.remove(rains,winds,snows);
+                    for (let i=0;i<frame.pointables.length;i++){
+                        let pointer = frame.pointables[i];
+                        barometer_sliderBall.position.x = pointer.tipPosition[0];
+                        if((dot.toPrecision(2)>0.7||dot.toPrecision(2)<-0.7)&&(pointer.tipPosition[0]<=266&&pointer.tipPosition[0]>=-266)){
+                                time_day =  (266 < Math.ceil((pointer.tipPosition[0]+266)/2)) ? 266 : Math.ceil((pointer.tipPosition[0]+266)/2);
+                                if(time_day < 0){
+                                    time_day = 0;
+                                }
+                                if(time_day > 225){
+                                    time_day = 225;
+                                }
+                                renderer.render( scene , camera );
+                        }
+                    }
+                }
+                //张开
+                else {
+
+                }
+            }
+        },
+        hand: function(hand){
+
+            var degree = Math.round(hand.roll() * TO_DEG)
+
+            //手心
+            if((Math.abs(degree))<=100){
+                scene.remove(travel_scene);
+                scene.remove(meau);
+                scene.add(chart);
+            }
+            //手背
+            if((Math.abs(degree))>100){
+
+                scene.remove(chart);
+                scene.add(travel_scene);
+                scene.add(meau);
+            }
+        }
+    });
+    /********************leap***********************************/
+
+
+
+    /**************timeTable************************/
+
+    timeTable = makeTextSprite(
+        timeName[ time_day * 24 + time_hour ],
+        {
+            fontsize: 20,
+            borderColor: {r:0, g:0, b:255, a:0.4},/* 边框颜色 */
+            backgroundColor: {r:0, g:255, b:255, a:0.9}/* 背景颜色 */
+        },
+        1 /* 缩放比例 */
+    );
+    timeTable.center = new THREE.Vector2( 0 , 0 );
+    timeTable.position.set( 0 , 0 , -1000 );
+    chart.add( timeTable );
+
+
+
+
+    /**************timeTable************************/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    animate();
+    leapmotion();
+
+
+    function animate() {
+        renderer.setAnimationLoop( render );
+    }
+
+
+    function render() {
+
+        zhen += 1;
+        zhen %= 3600;
+        if(zhen%20 === 0){
+            time_hour += 1;
+            time_hour %= 24;
+        }
+
+
+
+        /*****刷新charts*****/
+        chartFresh();
+        /*****刷新charts*****/
+
+        /****weather****/
+        winds_move();snows_move();rains_move();
+        /****weather****/
+
+
+        travel_next_clean();
+        travel_last_clean();
+        travel_front_clean();
+        travel_back_clean();
+        damage_next_clean();
+        damage_last_clean();
+        barometer_next_clean();
+        barometer_last_clean();
+        damage_screen_clean();
+        weather_rain_clean();
+        weather_snow_clean();
+        weather_wind_clean();
+
+        travel_next_inter( controller1 );
+        travel_last_inter( controller1 );
+        travel_front_inter( controller1 );
+        travel_back_inter( controller1 );
+        damage_next_inter( controller1 );
+        damage_last_inter( controller1 );
+        barometer_next_inter( controller1 );
+        barometer_last_inter( controller1 );
+        damage_screen_inter(controller1);
+        weather_snow_inter(controller1);
+        weather_wind_inter(controller1);
+        weather_rain_inter(controller1);
+
+        renderer.render( scene, camera );
+    }
+
+
+
+
+
+
+
+
+
+</script>
+
+</body>
+</html>
