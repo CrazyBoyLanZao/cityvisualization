@@ -130,7 +130,7 @@ export default class maps {
           marker.on('dblclick', (e) => {
             var r = confirm("无设备原因,是否播放演示视频");
             if (r === true) {
-              window.open('VR11/mp4.html','_self');
+              window.open('https://www.bilibili.com/video/BV1vX4y1K7XZ/','_self');
             } else {
               window.open('VR11/VR.html', '_self');
             }
